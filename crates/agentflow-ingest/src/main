@@ -1,0 +1,17 @@
+use agentflow_ingest::start_ingest;
+use agentflow_index::GdpTracker;
+use agentflow_classify::AgentHeuristics;
+use std::sync::Arc;
+
+#[tokio::main]
+async fn main() {
+    println!("🛡️ Geodesic Alpha: AgentFlow Indexer v0.1.0");
+
+    // Initialize shared state
+    let tracker = Arc::new(GdpTracker::new("./agentflow_db"));
+    let heuristics = Arc::new(AgentHeuristics::new());
+
+    // Run the ingest loop
+    start_ingest(heuristics, tracker).await;
+}
+

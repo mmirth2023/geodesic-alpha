@@ -1,0 +1,28 @@
+[package]
+name = "agentflow-ingest"
+version = "0.1.0"
+edition = "2021"
+description = "High-frequency Solana machine-GDP indexer for Geodesic Alpha."
+
+[dependencies]
+# Core Async Runtime
+tokio = { workspace = true }
+
+# Solana Protocol Stack
+solana-sdk = { workspace = true }
+solana-client = { workspace = true }
+solana-transaction-status = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Internal Geodesic Alpha Workspace Crates
+agentflow-classify = { path = "../agentflow-classify" }
+agentflow-index = { path = "../agentflow-index" }
+agentflow-api = { path = "../agentflow-api" }
+
+[[bin]]
+name = "agentflow-ingest"
+path = "src/main.rs"
+
