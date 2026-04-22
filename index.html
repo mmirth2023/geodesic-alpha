@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEODESIC ALPHA — Solana Machine GDP Indexer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --black:  #050608;
+            --panel:  #08090d;
+            --panel2: #0b0d14;
+            --border: #181b24;
+            --border2: #242836;
+            --amber:  #ffb300;
+            --amber2: #8a5f00;
+            --green:  #00d97e;
+            --green2: #004d30;
+            --red:    #ff3f52;
+            --cyan:   #00c4d8;
+            --white:  #cdd2e0;
+            --muted:  #424761;
+            --muted2: #2a2e40;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { height: 100%; }
+
+        body {
+            background: var(--black);
+            color: var(--white);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            line-height: 1.5;
+            min-height: 100%;
+            overflow-x: hidden;
+            cursor: crosshair;
+        }
+
+        /* ── scanlines ── */
+        body::after {
+            content: '';
+            position: fixed; inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px);
+            pointer-events: none;
+            z-index: 9000;
+        }
+
+        /* ── ticker ── */
+        .ticker {
+            height: 26px;
+            background: #06070a;
+            border-bottom: 1px solid var(--amber2);
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .ticker-badge {
+            background: var(--amber);
+            color: #000;
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.14em;
+            padding: 0 10px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .ticker-scroll { display: flex; animation: scroll 35s linear infinite; }
+        .ticker-item { padding: 0 24px; white-space: nowrap; font-size: 10px; }
+        .ticker-item .s { color: var(--amber); font-weight: 600; margin-right: 5px; }
+        .ticker-item .u { color: var(--green); }
+        .ticker-item .d { color: var(--red); }
+        @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+        /* ── topnav ── */
+        .topnav {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: #07080c;
+            border-bottom: 1px solid var(--border2);
+            padding: 0 0 0 16px;
+            height: 38px;
+            flex-shrink: 0;
+        }
+        .brand {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            color: var(--amber);
+            margin-right: 28px;
+            white-space: nowrap;
+        }
+        .brand em { color: var(--muted); font-style: normal; font-weight: 300; }
+        .tabs { display: flex; }
+        .tab {
+            height: 38px;
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            font-size: 9px;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+            border-left: 1px solid var(--border);
+            cursor: pointer;
+            transition: color 0.2s;
+            white-space: nowrap;
+        }
+        .tab:hover { color: var(--white); }
+        .tab.on { color: var(--amber); border-bottom: 2px solid var(--amber); }
+        .nav-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 0 16px;
+            font-size: 9px;
+        }
+        .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 5px var(--green);
+            animation: blink 2s ease-in-out infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+        .online { color: var(--green); letter-spacing: 0.1em; }
+        .clock-str { color: var(--muted); }
+
+        /* ── main grid ── */
+        .layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            grid-template-rows: 1fr;
+            gap: 1px;
+            background: var(--border);
+            height: calc(100vh - 26px - 38px - 26px);
+            min-height: 520px;
+        }
+
+        /* ── sidebar ── */
+        .sidebar {
+            background: var(--panel);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .side-section { border-bottom: 1px solid var(--border); }
+        .side-header {
+            padding: 8px 14px;
+            font-size: 9px;
+            letter-spacing: 0.16em;
+            color: var(--amber);
+            background: #090b10;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .side-header .ctrl { color: var(--muted); cursor: pointer; }
+        .side-header .ctrl:hover { color: var(--cyan); }
+        .stack-list { padding: 10px 14px; }
+        .stack-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 9px 0;
+            border-bottom: 1px solid rgba(24,27,36,0.8);
+        }
+        .stack-row:last-child { border-bottom: none; }
+        .stack-icon {
+            width: 18px; height: 18px;
+            background: var(--green2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 8px; color: var(--green);
+            flex-shrink: 0; margin-top: 1px;
+        }
+        .stack-icon.amber { background: var(--amber2); color: var(--amber); }
+        .stack-icon.cyan { background: #002a30; color: var(--cyan); }
+        .stack-name { font-size: 10px; color: var(--white); font-weight: 500; margin-bottom: 2px; }
+        .stack-desc { font-size: 9px; color: var(--muted); line-height: 1.4; }
+
+        /* CU meter in sidebar */
+        .cu-block { padding: 14px; }
+        .cu-label { font-size: 9px; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 6px; }
+        .cu-value { font-size: 22px; font-weight: 600; color: var(--amber); line-height: 1; margin-bottom: 8px; }
+        .cu-bar { height: 4px; background: var(--muted2); margin-bottom: 4px; }
+        .cu-bar-fill { height: 100%; background: linear-gradient(90deg, var(--amber2), var(--amber)); animation: cuGrow 1.5s ease-out forwards; width: 0; }
+        @keyframes cuGrow { to { width: 65%; } }
+        .cu-sub { font-size: 9px; color: var(--muted); }
+
+        /* network stats */
+        .net-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); }
+        .net-cell {
+            background: var(--panel);
+            padding: 10px 14px;
+        }
+        .net-cell-label { font-size: 9px; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 4px; }
+        .net-cell-val { font-size: 13px; font-weight: 500; color: var(--white); }
+        .net-cell-val.g { color: var(--green); }
+        .net-cell-val.a { color: var(--amber); }
+
+        /* ── main content ── */
+        .main {
+            background: var(--panel);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .main-header {
+            padding: 6px 20px;
+            border-bottom: 1px solid var(--border2);
+            background: #09090e;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .main-title { font-size: 9px; letter-spacing: 0.16em; color: var(--amber); }
+        .main-ctrl { display: flex; gap: 8px; }
+        .main-ctrl span {
+            font-size: 9px; color: var(--muted);
+            border: 1px solid var(--border2);
+            padding: 2px 8px; cursor: pointer;
+        }
+        .main-ctrl span:hover { color: var(--cyan); border-color: var(--cyan); }
+        .main-ctrl span.live { color: var(--green); border-color: var(--green2); }
+
+        .main-body {
+            padding: 32px 36px;
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        /* eyebrow */
+        .eyebrow {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 9px;
+            color: var(--muted);
+            letter-spacing: 0.12em;
+        }
+        .eyebrow::before, .eyebrow::after {
+            content: '';
+            flex: 1; height: 1px;
+            background: var(--border2);
+        }
+
+        /* headline */
+        .headline {
+            font-size: clamp(22px, 3.2vw, 44px);
+            font-weight: 600;
+            line-height: 1.06;
+            letter-spacing: -0.02em;
+        }
+        .headline .a { color: var(--amber); }
+        .headline .g { color: var(--green); }
+
+        .subline {
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 300;
+            color: var(--muted);
+            line-height: 1.7;
+            max-width: 560px;
+            border-left: 2px solid var(--amber2);
+            padding-left: 14px;
+        }
+
+        /* MCS block */
+        .mcs-card {
+            background: var(--panel2);
+            border: 1px solid var(--border2);
+            padding: 22px;
+            position: relative;
+        }
+        .mcs-card::before {
+            content: 'MACHINE CERTAINTY SCORE (MCS)';
+            position: absolute;
+            top: 0; left: 18px;
+            transform: translateY(-50%);
+            background: var(--panel2);
+            padding: 0 6px;
+            font-size: 8px;
+            letter-spacing: 0.18em;
+            color: var(--amber);
+        }
+        .mcs-top {
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            margin-bottom: 14px;
+        }
+        .mcs-num {
+            font-size: 56px;
+            font-weight: 600;
+            color: var(--green);
+            line-height: 1;
+            letter-spacing: -0.04em;
+        }
+        .mcs-denom { font-size: 16px; color: var(--muted); margin-bottom: 6px; }
+        .mcs-delta {
+            font-size: 12px;
+            color: var(--green);
+            margin-bottom: 8px;
+            padding: 2px 8px;
+            background: rgba(0,217,126,0.08);
+            border: 1px solid var(--green2);
+        }
+        .bar-track {
+            height: 6px;
+            background: var(--muted2);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+        .bar-fill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, var(--green2), var(--green));
+            animation: barGrow 1.8s ease-out forwards;
+            position: relative;
+        }
+        .bar-fill::after {
+            content: '';
+            position: absolute; right: 0; top: 0; bottom: 0; width: 16px;
+            background: rgba(0,217,126,0.5);
+            filter: blur(3px);
+        }
+        @keyframes barGrow { to { width: 82.4%; } }
+        .bar-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 8px;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            margin-bottom: 18px;
+        }
+        .mcs-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: var(--border);
+        }
+        .mcs-stat {
+            background: var(--panel);
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .mcs-stat-l { font-size: 8px; color: var(--muted); letter-spacing: 0.1em; }
+        .mcs-stat-v { font-size: 14px; font-weight: 500; }
+        .mcs-stat-v.g { color: var(--green); }
+        .mcs-stat-v.a { color: var(--amber); }
+        .mcs-stat-v.c { color: var(--cyan); }
+
+        /* agent grid */
+        .agent-section { }
+        .agent-label { font-size: 9px; color: var(--muted); letter-spacing: 0.14em; margin-bottom: 10px; }
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+        }
+        .agent-cell {
+            background: #09090e;
+            border: 1px solid var(--border);
+            padding: 9px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: default;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .agent-cell:hover { border-color: var(--amber2); background: rgba(255,179,0,0.03); }
+        .agent-cell .an { font-size: 10px; color: var(--amber); font-weight: 500; }
+        .agent-cell .av { font-size: 10px; color: var(--green); }
+        .agent-cell .ar { font-size: 10px; color: var(--red); }
+
+        /* CTAs */
+        .ctas { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 7px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px; font-weight: 600;
+            letter-spacing: 0.1em;
+            padding: 9px 18px;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s;
+        }
+        .btn-a { background: var(--amber); color: #000; }
+        .btn-a:hover { background: #ffc733; transform: translateY(-1px); }
+        .btn-c { background: transparent; color: var(--cyan); border: 1px solid var(--cyan); }
+        .btn-c:hover { background: rgba(0,196,216,0.07); }
+        .btn-m { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
+        .btn-m:hover { color: var(--white); border-color: var(--white); }
+
+        /* ── cmdbar ── */
+        .cmdbar {
+            background: #07080c;
+            border-top: 1px solid var(--border2);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            height: 26px;
+            gap: 12px;
+            font-size: 10px;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+        .cmdbar .prompt { color: var(--green); white-space: nowrap; }
+        .cmd-input {
+            flex: 1;
+            background: transparent; border: none; outline: none;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            color: var(--amber);
+            caret-color: var(--amber);
+        }
+        .cmdbar .right { margin-left: auto; display: flex; gap: 14px; align-items: center; white-space: nowrap; }
+        .cursor-block {
+            display: inline-block; width: 6px; height: 12px;
+            background: var(--amber); vertical-align: middle;
+            animation: blink 1s step-end infinite;
+            margin-left: 1px;
+        }
+
+        /* scrollbar */
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); }
+
+        /* entry animations */
+        .sidebar { animation: fadeIn .4s ease-out .05s both; }
+        .main { animation: fadeIn .4s ease-out both; }
+        @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
+
+        @media (max-width: 700px) {
+            .layout { grid-template-columns: 1fr; height: auto; }
+            .mcs-stats { grid-template-columns: 1fr 1fr; }
+            .agent-grid { grid-template-columns: 1fr 1fr; }
+            .headline { font-size: 26px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="ticker">
+    <div class="ticker-badge">mGDP LIVE</div>
+    <div style="overflow:hidden;flex:1;display:flex;">
+        <div class="ticker-scroll" id="tick">
+            <div class="ticker-item"><span class="s">MCS.IDX</span><span class="u">82.4 ▲+2.3%</span></div>
+            <div class="ticker-item"><span class="s">HFT.ARB</span><span class="u">14,220 ▲+5.3%</span></div>
+            <div class="ticker-item"><span class="s">YIELD.BOT</span><span class="u">8,901 ▲+1.8%</span></div>
+            <div class="ticker-item"><span class="s">NFT.SNP</span><span class="d">3,310 ▼−0.9%</span></div>
+            <div class="ticker-item"><span class="s">BRIDGE.AGT</span><span class="u">2,190 ▲+4.1%</span></div>
+            <div class="ticker-item"><span class="s">GAS.OPT</span><span class="u">5,441 ▲+0.6%</span></div>
+            <div class="ticker-item"><span class="s">CU.THRESH</span>50,000</div>
+            <div class="ticker-item"><span class="s">SOL.TPS</span><span class="u">3,241</span></div>
+            <div class="ticker-item"><span class="s">AGENTS.TOTAL</span><span class="u">34,062 ▲</span></div>
+            <div class="ticker-item"><span class="s">ENTROPY.SCR</span><span class="u">91.2</span></div>
+            <div class="ticker-item"><span class="s">MCS.IDX</span><span class="u">82.4 ▲+2.3%</span></div>
+            <div class="ticker-item"><span class="s">HFT.ARB</span><span class="u">14,220 ▲+5.3%</span></div>
+            <div class="ticker-item"><span class="s">YIELD.BOT</span><span class="u">8,901 ▲+1.8%</span></div>
+            <div class="ticker-item"><span class="s">NFT.SNP</span><span class="d">3,310 ▼−0.9%</span></div>
+            <div class="ticker-item"><span class="s">BRIDGE.AGT</span><span class="u">2,190 ▲+4.1%</span></div>
+            <div class="ticker-item"><span class="s">GAS.OPT</span><span class="u">5,441 ▲+0.6%</span></div>
+            <div class="ticker-item"><span class="s">CU.THRESH</span>50,000</div>
+            <div class="ticker-item"><span class="s">SOL.TPS</span><span class="u">3,241</span></div>
+            <div class="ticker-item"><span class="s">AGENTS.TOTAL</span><span class="u">34,062 ▲</span></div>
+            <div class="ticker-item"><span class="s">ENTROPY.SCR</span><span class="u">91.2</span></div>
+        </div>
+    </div>
+</div>
+
+<nav class="topnav">
+    <div class="brand">GEODESIC <em>ALPHA</em></div>
+    <div class="tabs">
+        <div class="tab on">DASHBOARD</div>
+        <div class="tab">ENTROPY</div>
+        <div class="tab">AGENTS</div>
+        <div class="tab">BOUNTIES</div>
+    </div>
+    <div class="nav-right">
+        <div class="dot"></div>
+        <span class="online">SYSTEM ONLINE</span>
+        <span style="color:var(--muted)">ARM64/TERMUX</span>
+        <span class="clock-str" id="clk">2026-04-22 00:00:00 UTC</span>
+    </div>
+</nav>
+
+<div class="layout">
+
+    <div class="sidebar">
+
+        <div class="side-section">
+            <div class="side-header">
+                <span>▸ DEPLOYMENT STACK</span>
+                <span class="ctrl">↺</span>
+            </div>
+            <div class="stack-list">
+                <div class="stack-row">
+                    <div class="stack-icon">RS</div>
+                    <div>
+                        <div class="stack-name">RUST / SOLANA-PROGRAM</div>
+                        <div class="stack-desc">High-concurrency indexing for CU-heavy txns. Three-module Substreams pipeline.</div>
+                    </div>
+                </div>
+                <div class="stack-row">
+                    <div class="stack-icon amber">TX</div>
+                    <div>
+                        <div class="stack-name">TERMUX / ANDROID</div>
+                        <div class="stack-desc">Edge-node execution on ARM64. Extreme capital efficiency.</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="side-section">
+            <div class="side-header">
+                <span>▸ CU THRESHOLD FILTER</span>
+                <span class="ctrl">↺</span>
+            </div>
+            <div class="cu-block">
+                <div class="cu-label">ACTIVE THRESHOLD</div>
+                <div class="cu-value">50,000</div>
+                <div class="cu-bar"><div class="cu-bar-fill"></div></div>
+                <div class="cu-sub">65% of blocks qualify · 34,062 agents flagged</div>
+            </div>
+        </div>
+
+        <div class="side-section" style="border-bottom:none; flex:1;">
+            <div class="side-header">
+                <span>▸ NETWORK STATS</span>
+                <span class="ctrl">↺</span>
+            </div>
+            <div class="net-grid">
+                <div class="net-cell">
+                    <div class="net-cell-label">SOL TPS</div>
+                    <div class="net-cell-val g" id="tps">3,241</div>
+                </div>
+                <div class="net-cell">
+                    <div class="net-cell-label">SLOT HEIGHT</div>
+                    <div class="net-cell-val a">284,410,033</div>
+                </div>
+                <div class="net-cell">
+                    <div class="net-cell-label">EPOCH</div>
+                    <div class="net-cell-val">659</div>
+                </div>
+                <div class="net-cell">
+                    <div class="net-cell-label">VALIDATOR CT</div>
+                    <div class="net-cell-val g">1,847</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="main">
+        <div class="main-header">
+            <span class="main-title">▸ MACHINE GDP INDEXER — LIVE OVERVIEW</span>
+            <div class="main-ctrl">
+                <span class="live">● LIVE</span>
+                <span>EXPORT</span>
+                <span>API</span>
+                <span>✕</span>
+            </div>
+        </div>
+
+        <div class="main-body">
+
+            <div class="eyebrow">GEODESIC ALPHA LLC &nbsp;·&nbsp; syntaxerrorprotocol &nbsp;·&nbsp; SOLANA FRONTIER HACKATHON 2026</div>
+
+            <div>
+                <div class="headline">
+                    QUANTIFYING<br>
+                    <span class="a">MACHINE GDP</span><br>
+                    ON <span class="g">SOLANA</span><span class="cursor-block"></span>
+                </div>
+                <p class="subline" style="margin-top:18px;">
+                    Isolating autonomous agent activity through high-pass Compute Unit filtering (&gt;50k CU) to measure real-time machine-driven economic work — the first live index of agentic on-chain output.
+                </p>
+            </div>
+
+            <div class="mcs-card">
+                <div class="mcs-top">
+                    <div class="mcs-num" id="mcs">82.4</div>
+                    <div>
+                        <div class="mcs-denom">/ 100</div>
+                        <div class="mcs-delta" id="mcs-delta">▲ +2.3% (24h)</div>
+                    </div>
+                </div>
+                <div class="bar-track"><div class="bar-fill" id="bar"></div></div>
+                <div class="bar-labels"><span>HUMAN</span><span>AMBIGUOUS</span><span>MACHINE</span></div>
+                <div class="mcs-stats">
+                    <div class="mcs-stat">
+                        <span class="mcs-stat-l">AGENTS FLAGGED</span>
+                        <span class="mcs-stat-v g">34,062</span>
+                    </div>
+                    <div class="mcs-stat">
+                        <span class="mcs-stat-l">CU THRESHOLD</span>
+                        <span class="mcs-stat-v a">50,000</span>
+                    </div>
+                    <div class="mcs-stat">
+                        <span class="mcs-stat-l">ENTROPY INDEX</span>
+                        <span class="mcs-stat-v c">91.2</span>
+                    </div>
+                    <div class="mcs-stat">
+                        <span class="mcs-stat-l">mGDP SHARE</span>
+                        <span class="mcs-stat-v g">38.7%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="agent-section">
+                <div class="agent-label">AGENT CLASSIFICATIONS (LIVE)</div>
+                <div class="agent-grid">
+                    <div class="agent-cell"><span class="an">HFT_ARB</span><span class="av">14,220 ▲</span></div>
+                    <div class="agent-cell"><span class="an">YIELD_BOT</span><span class="av">8,901 ▲</span></div>
+                    <div class="agent-cell"><span class="an">NFT_SNIPER</span><span class="ar">3,310 ▼</span></div>
+                    <div class="agent-cell"><span class="an">BRIDGE_AGT</span><span class="av">2,190 ▲</span></div>
+                    <div class="agent-cell"><span class="an">GAS_OPTIM</span><span class="av">5,441 ▲</span></div>
+                    <div class="agent-cell"><span class="an">UNCLASSIFIED</span><span style="color:var(--muted)">—</span></div>
+                </div>
+            </div>
+
+            <div class="ctas">
+                <a href="https://github.com/mmirth2023" class="btn btn-a">⌥ VIEW CODEBASE</a>
+                <a href="#" class="btn btn-c">▶ ENTROPY DOCS</a>
+                <a href="#" class="btn btn-m">◈ BOUNTY STATUS</a>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<div class="cmdbar">
+    <span class="prompt">geo@alpha:~$</span>
+    <input class="cmd-input" id="cmd" type="text"
+        placeholder="solana index --threshold 50000 --env arm64 --output mcs" />
+    <div class="right">
+        <span id="sess" style="color:var(--green)">SESSION: 00:00:00</span>
+        <span style="color:var(--muted)">FEEDS: <span style="color:var(--green)">CONNECTED</span></span>
+        <span style="color:var(--muted)">v4.0.1</span>
+    </div>
+</div>
+
+<script>
+    // UTC clock
+    const clkEl = document.getElementById('clk');
+    function tick() {
+        const n = new Date();
+        const p = v => String(v).padStart(2,'0');
+        clkEl.textContent = `${n.getUTCFullYear()}-${p(n.getUTCMonth()+1)}-${p(n.getUTCDate())} ${p(n.getUTCHours())}:${p(n.getUTCMinutes())}:${p(n.getUTCSeconds())} UTC`;
+    }
+    tick(); setInterval(tick, 1000);
+
+    // Session timer
+    let s = 0;
+    const sessEl = document.getElementById('sess');
+    setInterval(() => {
+        s++;
+        const p = v => String(v).padStart(2,'0');
+        sessEl.textContent = `SESSION: ${p(Math.floor(s/3600))}:${p(Math.floor((s%3600)/60))}:${p(s%60)}`;
+    }, 1000);
+
+    // MCS jitter
+    const mcsEl = document.getElementById('mcs');
+    const deltaEl = document.getElementById('mcs-delta');
+    let base = 82.4;
+    setInterval(() => {
+        const drift = (Math.random() - 0.5) * 0.6;
+        base = Math.max(70, Math.min(95, base + drift));
+        mcsEl.textContent = base.toFixed(1);
+        const sign = drift >= 0 ? '▲ +' : '▼ ';
+        deltaEl.textContent = `${sign}${Math.abs(drift * 0.4).toFixed(2)}% (Δ)`;
+        deltaEl.style.color = drift >= 0 ? 'var(--green)' : 'var(--red)';
+        deltaEl.style.borderColor = drift >= 0 ? 'var(--green2)' : 'rgba(255,63,82,0.3)';
+    }, 3000);
+
+    // TPS jitter
+    const tpsEl = document.getElementById('tps');
+    setInterval(() => {
+        const t = 3241 + Math.floor((Math.random()-0.5)*120);
+        tpsEl.textContent = t.toLocaleString();
+    }, 2000);
+
+    // Cmd bar
+    document.getElementById('cmd').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            const v = e.target.value;
+            e.target.value = '';
+            e.target.placeholder = `▶ ${v || 'help'} — running...`;
+            setTimeout(() => {
+                e.target.placeholder = 'solana index --threshold 50000 --env arm64 --output mcs';
+            }, 2200);
+        }
+    });
+</script>
+</body>
+</html>
+
