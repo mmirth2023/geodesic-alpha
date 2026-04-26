@@ -1,30 +1,26 @@
-# 🛡️ Geodesic Alpha: The Machine GDP Sentinel
-
-**Geodesic Alpha** is a high-frequency economic indexer designed for the Solana 2026 "Agentic Internet." It provides real-time legibility into the autonomous machine economy by isolating high-compute agent activity from human noise.
-
-## 📱 Proof of Concept: Edge-Native Efficiency
-This project was developed and successfully stress-tested on **ARM64 architecture via Termux**. 
-- **The Challenge:** Indexing Solana Mainnet metadata on mobile hardware.
-- **The Result:** Successful real-time tracking of 400+ agents per block with sub-500ms latency.
-- **The Significance:** If Geodesic Alpha can perform at this level on a mobile device, its performance on enterprise-grade hardware will be industry-leading.
-
-## 🚀 The Value Proposition
-Traditional metrics like TPS are vanity metrics. Geodesic Alpha introduces **Machine GDP (mGDP)**—a metric weighted by Compute Units (CU). 
-
-- **Compute-Weighted:** Filters for transactions >50k CU to isolate bots, arbitrageurs, and AI agents.
-- **Alpha Discovery:** Detects economic "spikes" (Velocity) to predict network congestion and MEV opportunities.
-- **Resilient Infrastructure:** Uses `Sled` for zero-admin, embedded persistence.
-
-## 🛠️ Architecture
-- **Ingest (`agentflow-ingest`)**: Real-time RPC crawler with pattern-matched metadata extraction.
-- **Classify (`agentflow-classify`)**: Heuristic engine defining agentic signatures.
-- **Index (`agentflow-index`)**: High-performance local persistence.
-- **API (`agentflow-api`)**: Local REST endpoint providing USD-denominated economic signals.
-
-## 💰 Funding Request & Scalability
-We are seeking funding to transition from this **Mobile PoC** to an **Enterprise Server Architecture**.
-- **Objective:** Deploy Geodesic Alpha on dedicated high-memory, high-bandwidth NVMe servers.
-- **Expansion:** Scaling the indexer to support WebSocket-based global "Alpha Feeds" for institutional quant funds.
-- **Goal:** To become the standard Economic Census for the Solana Agentic Layer.
-
----
+​🛡️ Geodesic Alpha: The Machine GDP Sentinel
+​Geodesic Alpha is a high-performance, modular indexing engine built in Rust, designed to quantify the Machine-to-Machine (M2M) economy on Solana.
+​As the network transitions into the "Agentic Internet" era (2026), traditional metrics like raw Transaction Count or TVL have become lagging indicators. Geodesic Alpha introduces Machine GDP (mGDP)—a deterministic, compute-weighted index that isolates autonomous agent activity from human noise.
+​🚀 The Vision: Beyond Vanity Metrics
+​In a world of automated liquidity, the true health of a network is found in its Execution Intensity. Geodesic Alpha analyzes the "Execution Physics" of the Solana Sealevel runtime to identify high-utility agents.
+​Compute-Weighted Analysis: We filter for transactions consuming >50k Compute Units (CU), isolating sophisticated AI agents, HFT arbitrageurs, and cross-chain aggregators.
+​Machine Certainty Score (MCS): A proprietary heuristic that determines the probability of a transaction being non-human based on deterministic execution patterns.
+​Zero-Latency Indexing: Optimized for the Alpenglow (150ms) era, providing real-time economic signals before they hit historical data aggregators.
+​🛠️ Modular Architecture
+​The system is built as a highly decoupled Rust workspace, ensuring each component can scale independently:
+​agentflow-ingest: High-throughput RPC/Geyser crawler with pattern-matched metadata extraction.
+​agentflow-classify: The intelligence layer. Applies heuristic signatures to distinguish "Machine Work" from "Sybil Noise."
+​agentflow-index: High-performance persistence layer using Sled, an embedded KV store designed for zero-admin high-concurrency workloads.
+​agentflow-api: An Axum-powered REST gateway providing USD-denominated economic signals and real-time mGDP data.
+​📱 Edge-Native Efficiency (The PoC)
+​Uniquely, Geodesic Alpha was architected and stress-tested on ARM64 architecture via Termux.
+​The Challenge: Indexing Solana Mainnet metadata on mobile hardware with limited resources.
+​The Result: Successful real-time tracking of 400+ agents per block with sub-500ms latency.
+​The Significance: By achieving enterprise-level indexing on an edge device, we have proven that the Geodesic Alpha codebase is one of the most resource-efficient engines in the ecosystem. On dedicated NVMe infrastructure, this system is built to lead the market.
+​🔮 Future Roadmap
+​Phase 1: Institutional API Access
+​We are developing a low-latency WebSocket feed designed for institutional quant funds. This will provide real-time "Machine Alpha" alerts, allowing funds to track the movement of autonomous capital in the same second the execution occurs.
+​Phase 2: Cross-Chain Liquidity Tracking
+​Expansion of the agentflow-classify heuristics to track cross-chain agentic flows (SVM to EVM). This will provide a holistic view of the global Machine GDP, identifying where autonomous agents are migrating and why.
+​Phase 3: Integration with Solana Agent Registry
+​Working toward becoming the primary verification layer for the official Solana Agent Registry, providing a "Credit Score" for autonomous agents based on their historical mGDP contribution.
